@@ -3,6 +3,7 @@ package jp.gr.java_conf.daisy.infinite_scroll_helper.sample;
 import android.app.Activity;
 import android.os.Bundle;
 import android.os.Handler;
+import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.ProgressBar;
@@ -19,6 +20,7 @@ public class MainActivity extends Activity {
     private ArrayAdapter<String> mAdapter;
     private InfiniteScrollHelper mInfiniteScrollHelper;
     private Handler mHandler;
+    private Runnable mLoadNextPageRunnable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,13 +29,27 @@ public class MainActivity extends Activity {
         mListView = (ListView) findViewById(R.id.listView);
         mAdapter = new ArrayAdapter<String>(this, R.layout.list_item);
         mListView.setAdapter(mAdapter);
-        FakeListItemFetcher fetcher = new FakeListItemFetcher();
+        final FakeListItemFetcher fetcher = new FakeListItemFetcher();
         mInfiniteScrollHelper = new InfiniteScrollHelper(
                 mListView, fetcher, new ProgressBar(this));
         mAdapter.addAll(fetcher.initialItems());
         mInfiniteScrollHelper.notifyLoadingCompletion(
                 InfiniteScrollHelper.LoadingState.PARTIALLY_LOADED);
         mHandler = new Handler();
+        findViewById(R.id.resetButton).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mInfiniteScrollHelper.reset();
+                if (mLoadNextPageRunnable != null) {
+                    mHandler.removeCallbacks(mLoadNextPageRunnable);
+                }
+                mListView.smoothScrollToPosition(0);
+                mAdapter.clear();
+                mAdapter.addAll(fetcher.initialItems());
+                mInfiniteScrollHelper.notifyLoadingCompletion(
+                        InfiniteScrollHelper.LoadingState.PARTIALLY_LOADED);
+            }
+        });
     }
 
     private class FakeListItemFetcher implements InfiniteScrollHelper.ListItemFetcher {
@@ -57,8 +73,7 @@ public class MainActivity extends Activity {
 
         @Override
         public void fetchMoreItems() {
-            // Simulate network delay.
-            mHandler.postDelayed(new Runnable() {
+            mLoadNextPageRunnable = new Runnable() {
                 @Override
                 public void run() {
                     int nextIndex = loadedDataIndex + PAGE_SIZE;
@@ -73,7 +88,9 @@ public class MainActivity extends Activity {
                                     : InfiniteScrollHelper.LoadingState.PARTIALLY_LOADED
                     );
                 }
-            }, 1000);
+            };
+            // Simulate network delay.
+            mHandler.postDelayed(mLoadNextPageRunnable, 1000);
         }
     }
 }

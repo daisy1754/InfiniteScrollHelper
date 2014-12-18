@@ -62,5 +62,7 @@ public class InfiniteScrollHelper {
     public void reset() {
         mLoadingState = LoadingState.INITIAL;
         mLoadingIndicatorView.setVisibility(View.GONE);
+        mListView.removeFooterView(mLoadingIndicatorView);
+        mListView.addFooterView(mLoadingIndicatorView);
     }
 }
